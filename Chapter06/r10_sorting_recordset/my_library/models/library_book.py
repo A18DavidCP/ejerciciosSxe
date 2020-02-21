@@ -18,6 +18,7 @@ class LibraryBook(models.Model):
     date_updated = fields.Datetime('Last Updated', copy=False)
     author_ids = fields.Many2many('res.partner', string='Authors')
     category_id = fields.Many2one('library.book.category', string='Category')
+    member_id = fields.Many2many('library.member')
     state = fields.Selection([
         ('draft', 'Unavailable'),
         ('available', 'Available'),
@@ -32,7 +33,10 @@ class LibraryBook(models.Model):
                    ('borrowed', 'available'),
                    ('available', 'lost'),
                    ('borrowed', 'lost'),
-                   ('lost', 'available')]
+                   ('lost', 'available'),
+                   ('available','draft'),
+                   ('borrowed','draft'),
+                   ('lost','draft')]
         return (old_state, new_state) in allowed
 
     @api.multi
@@ -46,6 +50,9 @@ class LibraryBook(models.Model):
 
     def make_available(self):
         self.change_state('available')
+
+    def make_unavailable(self):
+        self.change_state('draft')
 
     def make_borrowed(self):
         self.change_state('borrowed')
@@ -138,3 +145,4 @@ class LibraryMember(models.Model):
     date_end = fields.Date('Termination Date')
     member_number = fields.Char()
     date_of_birth = fields.Date('Date of birth')
+

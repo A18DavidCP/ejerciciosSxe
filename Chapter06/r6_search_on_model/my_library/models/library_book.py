@@ -4,6 +4,7 @@ import logging
 from odoo import models, fields, api
 from odoo.exceptions import UserError
 from odoo.tools.translate import _
+from datetime import datetime, timedelta
 
 
 logger = logging.getLogger(__name__)
@@ -18,6 +19,9 @@ class LibraryBook(models.Model):
     date_updated = fields.Datetime('Last Updated', copy=False)
     author_ids = fields.Many2many('res.partner', string='Authors')
     category_id = fields.Many2one('library.book.category', string='Category')
+    is_lent = fields.Boolean('Lent',compute='check_lent',default=False)
+    book_image = fields.Binary('Portada')
+    loan_ids = fields.One2many('library.loan',inverse_name='book_id')
     state = fields.Selection([
         ('draft', 'Unavailable'),
         ('available', 'Available'),
@@ -34,7 +38,14 @@ class LibraryBook(models.Model):
                    ('borrowed', 'lost'),
                    ('lost', 'available')]
         return (old_state, new_state) in allowed
-
+    
+    @api.multi
+    def check_lent(self):
+        for book in self:
+            domain = ['&',('book_id.id', '=', book.id), ('date_end', '>=', datetime.now())]
+            book.is_lent = self.env['library.loan'].search(domain, count=True) > 0
+            
+    
     @api.multi
     def change_state(self, new_state):
         for book in self:
@@ -108,3 +119,26 @@ class LibraryMember(models.Model):
     date_end = fields.Date('Termination Date')
     member_number = fields.Char()
     date_of_birth = fields.Date('Date of birth')
+
+class LibraryLoan(models.Model):
+    _name = 'library.loan'
+    _description= 'Library loan'
+    _rec_name = 'book_id'
+    _order ='date_end desc, date_end'
+
+    member_id = fields.Many2one('library.member',required=True)
+    book_id= fields.Many2one('library.book',required=True)
+    date_start = fields.Date('Loan start',default=lambda *a:datetime.now().strftime('%Y-%m-%d'))
+    date_end = fields.Date('Termination Date',default=lambda *a:(datetime.now()+timedelta(days=5)).strftime('%Y-%m-%d'))
+    
+    member_image = fields.Binary('Member Image', related='member_id.partner_id.image')
+
+@api.constrains('book_id')
+def _check_book_id(self):
+    for loan in self:
+        book=loan.book_id
+        domain=['&',('book_id.id','=',book.id),('date_end','>=',datetime.now())]
+        book.is_lent=self.search(domain,count=True)>1
+        if boo.is_lent:
+            raise models.ValidationError('Book is lent!')
+
