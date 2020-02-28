@@ -129,7 +129,7 @@ class LibraryLoan(models.Model):
     member_id = fields.Many2one('library.member',required=True)
     book_id= fields.Many2one('library.book',required=True)
     date_start = fields.Date('Loan start',default=lambda *a:datetime.now().strftime('%Y-%m-%d'))
-    date_end = fields.Date('Termination Date',default=lambda *a:(datetime.now()+timedelta(days=5)).strftime('%Y-%m-%d'))
+    date_end = fields.Date('Loan end',default=lambda *a:(datetime.now()+timedelta(days=5)).strftime('%Y-%m-%d'))
     
     member_image = fields.Binary('Member Image', related='member_id.partner_id.image')
 
